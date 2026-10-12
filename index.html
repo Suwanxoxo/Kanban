@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <link rel="stylesheet" href="style.css">
+        <link rel="icon" href="favicon.ico" type="image/ico">
+        <title>KANBAN BOARD</title>
+    </head>
+    <body>
+        <header>
+            <button class="button">ADD</button>
+            <h1>KANBAN BOARD</h1>
+        </header>
+
+        <div id="modal" class="hidden">
+            <div class="modal-content">
+                <h3>Neue Aufgabe</h3>
+                <input type="text" id="taskText" placeholder="Aufgabe eingeben...">
+                <input type="date" id="taskDate">
+                <br><br>
+                <button id="saveTask">Speichern</button>
+                <button id="closeModal">Abbrechen</button>
+            </div>
+        </div>
+
+        <div class="kasten">
+            <div class="pink">
+                <h2>TO DO</h2>
+                <hr class="hr1">
+            </div>
+            <div class="lila">
+                <h2>IN PROGRESS</h2>
+                <hr class="hr2">
+            </div>
+            <div class="blau">
+                <h2>DONE</h2>
+                <hr class="hr3">
+            </div>
+        </div>
+
+        <script src="script.js"></script>
+    </body>
+</html>
