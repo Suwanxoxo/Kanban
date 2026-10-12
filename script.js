@@ -6,10 +6,47 @@ const saveTask = document.getElementById("saveTask");
 const taskText = document.getElementById("taskText");
 const taskDate = document.getElementById("taskDate");
 
-const todoColumn = document.querySelector(".pink");
+const STORAGE_KEY = "kanban-tasks";
 
-// --- HILFSFUNKTION: Kärtchen mit Lösch-Button ausstatten ---
-function setupTaskEvents(task) {
+// Spalte passend zum Status
+const spalten = {
+    todo: document.querySelector(".pink"),
+    in_progress: document.querySelector(".lila"),
+    done: document.querySelector(".blau")
+};
+
+// --- SPEICHER (localStorage statt PHP/Datenbank) ---
+function ladeAufgaben() {
+    try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    } catch {
+        return [];
+    }
+}
+
+function speichereAufgaben(tasks) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+}
+
+// --- HILFSFUNKTION: Kärtchen bauen und mit Events ausstatten ---
+function erstelleKarte(taskData) {
+    const task = document.createElement("div");
+    task.className = "task";
+    task.draggable = true;
+    task.dataset.id = taskData.id;
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "delete-btn";
+    deleteBtn.textContent = "X";
+
+    const name = document.createElement("strong");
+    name.textContent = taskData.name;
+
+    const datum = document.createElement("small");
+    datum.textContent = taskData.date;
+
+    task.append(deleteBtn, name, document.createElement("br"), datum);
+
     // Drag & Drop
     task.addEventListener("dragstart", () => {
         task.classList.add("is-dragging");
@@ -19,26 +56,14 @@ function setupTaskEvents(task) {
     });
 
     // Löschen
-    const deleteBtn = task.querySelector(".delete-btn");
     deleteBtn.addEventListener("click", () => {
-        // Kurze Sicherheitsabfrage (optional)
         if (confirm("Aufgabe wirklich löschen?")) {
-            fetch("delete_task.php", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id: task.dataset.id })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    task.remove(); // Löscht das Kärtchen sofort aus dem Browser
-                } else {
-                    alert("Fehler beim Löschen: " + data.error);
-                }
-            })
-            .catch(error => console.error("Fehler:", error));
+            speichereAufgaben(ladeAufgaben().filter(t => t.id !== taskData.id));
+            task.remove();
         }
     });
+
+    return task;
 }
 
 // Modal öffnen / schließen
@@ -48,9 +73,9 @@ addBtn.addEventListener("click", () => {
     // Aktuelles Datum berechnen und eintragen
     const heute = new Date();
     const jahr = heute.getFullYear();
-    const monat = String(heute.getMonth() + 1).padStart(2, '0'); 
+    const monat = String(heute.getMonth() + 1).padStart(2, '0');
     const tag = String(heute.getDate()).padStart(2, '0');
-    
+
     taskDate.value = `${jahr}-${monat}-${tag}`;
 });
 
@@ -58,91 +83,49 @@ closeModal.addEventListener("click", () => modal.classList.add("hidden"));
 
 // --- 1. NEUE AUFGABE SPEICHERN ---
 saveTask.addEventListener("click", () => {
-    if (taskText.value === "") return;
+    if (taskText.value.trim() === "") return;
 
-    fetch("save_task.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: taskText.value, date: taskDate.value, status: "todo" })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            const task = document.createElement("div");
-            task.className = "task";
-            task.draggable = true; 
-            task.dataset.id = data.id; 
-            
-            // HIER IST DAS NEUE X EINGEBAUT
-            task.innerHTML = `
-                <button class="delete-btn">X</button>
-                <strong>${taskText.value}</strong><br>
-                <small>${taskDate.value}</small>
-            `;
+    const taskData = {
+        id: crypto.randomUUID(),
+        name: taskText.value.trim(),
+        date: taskDate.value,
+        status: "todo"
+    };
 
-            setupTaskEvents(task);
-            todoColumn.appendChild(task);
+    const tasks = ladeAufgaben();
+    tasks.push(taskData);
+    speichereAufgaben(tasks);
 
-            taskText.value = "";
-            taskDate.value = "";
-            modal.classList.add("hidden");
-        }
-    });
+    spalten.todo.appendChild(erstelleKarte(taskData));
+
+    taskText.value = "";
+    taskDate.value = "";
+    modal.classList.add("hidden");
 });
 
 // --- 2. DROP-ZONEN (Für Drag & Drop und Status-Update) ---
-const columns = document.querySelectorAll(".pink, .lila, .blau");
-
-columns.forEach((column) => {
+Object.entries(spalten).forEach(([status, column]) => {
     column.addEventListener("dragover", (e) => e.preventDefault());
 
     column.addEventListener("drop", (e) => {
         e.preventDefault();
         const draggedTask = document.querySelector(".is-dragging");
-        
+
         if (draggedTask) {
             column.appendChild(draggedTask);
 
-            let neuerStatus = "todo";
-            if (column.classList.contains("lila")) neuerStatus = "in_progress";
-            if (column.classList.contains("blau")) neuerStatus = "done";
-
-            fetch("update_status.php", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id: draggedTask.dataset.id, status: neuerStatus })
-            });
+            const tasks = ladeAufgaben();
+            const gefunden = tasks.find(t => t.id === draggedTask.dataset.id);
+            if (gefunden) {
+                gefunden.status = status;
+                speichereAufgaben(tasks);
+            }
         }
     });
 });
 
-// --- 3. AUFGABEN BEIM LADEN DER SEITE AUS DB HOLEN ---
-document.addEventListener("DOMContentLoaded", () => {
-    fetch("load_tasks.php")
-    .then(response => response.json())
-    .then(tasks => {
-        if (tasks.error) return;
-
-        tasks.forEach(taskData => {
-            const task = document.createElement("div");
-            task.className = "task";
-            task.draggable = true; 
-            task.dataset.id = taskData.id; 
-            
-            const datum = taskData.date ? taskData.date.split(' ')[0] : '';
-
-            // HIER IST DAS NEUE X EINGEBAUT
-            task.innerHTML = `
-                <button class="delete-btn">X</button>
-                <strong>${taskData.name}</strong><br>
-                <small>${datum}</small>
-            `;
-
-            setupTaskEvents(task);
-
-            if (taskData.status === "in_progress") document.querySelector(".lila").appendChild(task);
-            else if (taskData.status === "done") document.querySelector(".blau").appendChild(task);
-            else document.querySelector(".pink").appendChild(task);
-        });
-    });
+// --- 3. AUFGABEN BEIM LADEN DER SEITE ANZEIGEN ---
+ladeAufgaben().forEach(taskData => {
+    const spalte = spalten[taskData.status] || spalten.todo;
+    spalte.appendChild(erstelleKarte(taskData));
 });
