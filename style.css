@@ -1,3 +1,16 @@
+/* Eigene Schrift (liegt im Ordner fonts/) */
+@font-face {
+    font-family: "Perec";
+    src: url("./fonts/Perec-Bold.otf") format("opentype");
+    font-weight: 100 900; /* Datei ist schon fett -> Browser soll nicht zusätzlich "fetter" machen */
+    font-display: swap;
+}
+
+/* Nur die Überschriften bekommen die eigene Schrift */
+h1, h2 {
+    font-family: "Perec", verdana;
+}
+
 body{
     background-color:rgb(255, 244, 236);
 }
@@ -5,7 +18,6 @@ body{
 h1{
     text-align: center;
     font-size:50px;
-    font-family:verdana;
     color:rgb(114, 107, 98);
 }
 
@@ -21,7 +33,7 @@ header {
     padding: 10px;
     text-align: center;
     font-size: 16px;
-    font-family:verdana;
+    font-family: verdana;
     transition-duration: 0.4s;
     cursor: pointer;
     background-color: rgb(248, 234, 207);
@@ -59,23 +71,36 @@ header {
 }
 
 .kasten > div {
-    width:23vw; 
+    /* 4 Spalten teilen sich die Breite gleichmäßig */
+    flex: 1;
+    min-width: 0;
     height: 74vh; 
-    float: left;
     border-radius: 40px;
     margin: 15px;
-    padding-left: 45px;
-    padding-bottom: 45px;
-    padding-right: 45px;
+    padding-left: 30px;
+    padding-bottom: 30px;
+    padding-right: 30px;
     padding-top: 3px;
 
+}
+
+.gelb{
+    background-color:#F3D3B2;
+    text-align: center; 
+    color:#a8743f;
+    font-family: verdana; 
+    font-size:28px;
+}
+
+.hr0{
+    color:#c9965f;
 }
 
 .pink{
     background-color:#f3c0e6;
     text-align: center; 
     color:rgb(180, 97, 169);
-    font-family:verdana; 
+    font-family: verdana; 
     font-size:28px;
 }
 
@@ -83,7 +108,7 @@ header {
     background-color:#d7bbeb;
     text-align: center; 
     color:rgb(128, 99, 155);
-    font-family:verdana;
+    font-family: verdana;
     font-size:28px;
 }
 
@@ -91,7 +116,7 @@ header {
     background-color:#a9b6e0;
     text-align: center;
     color:rgb(97, 113, 160);
-    font-family:verdana; 
+    font-family: verdana; 
     font-size:28px;
 }
 
@@ -107,7 +132,7 @@ header {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background-color: rgba(0, 0, 0, 0.6); /* Dunkler, halbtransparenter Hintergrund */
+    background-color: rgba(114, 107, 98, 0.45); /* Halbtransparenter Hintergrund im Board-Braun */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -126,7 +151,7 @@ header {
 .task {
     background-color: rgb(255, 244, 236); /* Das macht den Kasten weiß! */
     color: rgb(99, 92, 84);
-    font-family:verdana;
+    font-family: verdana;
     font-size: 16px;
     padding: 15px;
     margin-top: 15px;
@@ -169,7 +194,7 @@ header {
     font-size: 12px;
     cursor: pointer;
     transition: 0.2s;
-    font-family:verdana;
+    font-family: verdana;
 }
 
 .delete-btn:hover {
@@ -186,7 +211,7 @@ header {
     background-color: transparent;
     color: rgb(207, 88, 88);
     border: none;
-    font-family:verdana;
+    font-family: verdana;
     font-weight: bold;
     font-size: 12px;
     cursor: pointer;
@@ -211,6 +236,13 @@ header {
 
 /* --- Farben der Kärtchen je nach Spalte --- */
 
+/* Wenn die Aufgabe in der IDEA Spalte (.gelb) ist */
+.gelb .task {
+    background-color: #e8b98a; 
+    border: 2px solid #c9965f; 
+    color: #6b4520;
+}
+
 /* Wenn die Aufgabe in der TO DO Spalte (.pink) ist */
 .pink .task {
     background-color: #e59ad3; 
@@ -230,4 +262,240 @@ header {
     background-color: #8ca3de; 
     border: 2px solid #6171a0;
     color: #37456b; /* NEU: Ein sehr dunkles, gut lesbares Blau */
+}
+
+/* --- Login & Benutzer-Anzeige --- */
+#loginModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgb(255, 244, 236);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.modal-content {
+    width: 320px;
+    padding: 40px 40px 30px;
+    border-radius: 30px;
+    box-shadow: 0 10px 30px rgba(36, 23, 12, 0.12);
+    /* Farbstreifen oben in den drei Spaltenfarben */
+    background: linear-gradient(to right, #f3c0e6, #d7bbeb, #a9b6e0) top / 100% 10px no-repeat, white;
+}
+
+.modal-content h1 {
+    text-align: center;
+    color: rgb(114, 107, 98);
+    font-size: 28px;
+    margin: 0 0 5px;
+}
+
+.modal-content h3 {
+    color: rgb(180, 97, 169);
+    font-weight: normal;
+    margin: 0 0 25px;
+}
+
+.modal-content input {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0 0 12px;
+    padding: 12px 16px;
+    font-family: verdana;
+    font-size: 14px;
+    color: rgb(99, 92, 84);
+    background-color: rgb(255, 244, 236);
+    border: 2px solid #f3c0e6;
+    border-radius: 15px;
+    outline: none;
+    transition: 0.2s;
+}
+
+.modal-content input:focus {
+    border-color: #b461a9;
+    background-color: white;
+}
+
+.fehler {
+    color: rgb(207, 88, 88);
+    font-size: 13px;
+    min-height: 16px;
+    margin: 4px 0 -8px;
+}
+
+.modal-buttons {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+.modal-buttons button {
+    flex: 1;
+    padding: 12px;
+    font-family: verdana;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 15px;
+    transition: 0.2s;
+}
+
+.btn-primary {
+    background-color: #b461a9;
+    color: white;
+    border: 2px solid #b461a9;
+}
+
+.btn-primary:hover {
+    background-color: #832e76;
+    border-color: #832e76;
+}
+
+.btn-secondary {
+    background-color: white;
+    color: #80639b;
+    border: 2px solid #d7bbeb;
+}
+
+.btn-secondary:hover {
+    background-color: #d7bbeb;
+}
+
+/* ADD-Knopf und Benutzer-Anzeige auf gleicher Höhe */
+.button {
+    top: 20px;
+}
+
+#userInfo {
+    position: fixed;
+    top: 20px;
+    right: 4vw;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: verdana;
+    color: rgb(114, 107, 98);
+}
+
+#logoutBtn {
+    padding: 8px 16px;
+    font-family: verdana;
+    font-size: 14px;
+    cursor: pointer;
+    background-color: rgb(248, 234, 207);
+    border: 2px solid #fac166;
+    border-radius: 20px;
+    transition-duration: 0.4s;
+}
+
+#logoutBtn:hover {
+    background-color: #fac166;
+    color: azure;
+}
+
+
+/* --- Lange Listen: Spalte scrollt selbst, statt über den Rand zu laufen --- */
+.kasten > div {
+    box-sizing: border-box;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(114, 107, 98, 0.3) transparent;
+}
+
+/* Lange Aufgaben-Texte auf 3 Zeilen kürzen – Klick klappt sie auf */
+.task strong {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: normal;
+    overflow-wrap: anywhere;
+}
+
+.task.offen strong {
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+}
+
+.task {
+    cursor: pointer;
+}
+
+
+/* --- Spalten-Auswahl im Aufgaben-Popup --- */
+.kasten {
+    padding: 0 2vw;
+}
+
+.spalten-label {
+    font-family: verdana;
+    font-size: 13px;
+    color: rgb(114, 107, 98);
+    text-align: left;
+    margin: 4px 0 8px;
+}
+
+.spalten-label span {
+    color: rgba(114, 107, 98, 0.6);
+}
+
+#spaltenWahl {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.wahl {
+    padding: 9px;
+    font-family: verdana;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 15px;
+    border: 2px solid transparent;
+    transition: 0.2s;
+}
+
+.wahl-gelb { background-color: #F3D3B2; color: #6b4520; }
+.wahl-pink { background-color: #f3c0e6; color: #832e76; }
+.wahl-lila { background-color: #d7bbeb; color: #5a3877; }
+.wahl-blau { background-color: #a9b6e0; color: #37456b; }
+
+.wahl:hover {
+    transform: scale(1.04);
+}
+
+.wahl.aktiv {
+    border-color: currentColor;
+    font-weight: bold;
+    box-shadow: 0 3px 8px rgba(36, 23, 12, 0.18);
+}
+
+
+/* --- Fading-Effekt unten in der Spalte, wenn es noch mehr zu scrollen gibt --- */
+.kasten > .gelb { --spalten-farbe: #F3D3B2; }
+.kasten > .pink { --spalten-farbe: #f3c0e6; }
+.kasten > .lila { --spalten-farbe: #d7bbeb; }
+.kasten > .blau { --spalten-farbe: #a9b6e0; }
+
+.kasten > div::after {
+    content: "";
+    display: block;
+    position: sticky;
+    bottom: -30px; /* gleicht das padding-bottom der Spalte aus */
+    height: 90px;
+    margin-top: -90px;
+    background: linear-gradient(to bottom, transparent, var(--spalten-farbe) 85%);
+    pointer-events: none; /* Karten darunter bleiben klickbar */
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.kasten > div.mehr-unten::after {
+    opacity: 1;
 }
