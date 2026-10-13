@@ -17,8 +17,17 @@ body{
 
 h1{
     text-align: center;
-    font-size:50px;
+    font-size:clamp(28px, 4.5vw, 50px);
     color:rgb(114, 107, 98);
+}
+
+/* Spaltenüberschriften (Idea, To Do, In Progress, Done) */
+.kasten h2{
+    /* wächst/schrumpft mit der Fensterbreite, bleibt immer einzeilig */
+    font-size:clamp(13px, 1.9vw, 28px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 header {
@@ -37,7 +46,7 @@ header {
     transition-duration: 0.4s;
     cursor: pointer;
     background-color: rgb(248, 234, 207);
-    color: black;
+    color: rgb(114, 107, 98);
     border: 2px solid #fac166;
     position: fixed;
     border-radius: 50%;
@@ -77,9 +86,9 @@ header {
     height: 74vh; 
     border-radius: 40px;
     margin: 15px;
-    padding-left: 30px;
+    padding-left: clamp(8px, 2vw, 30px);
     padding-bottom: 30px;
-    padding-right: 30px;
+    padding-right: clamp(8px, 2vw, 30px);
     padding-top: 3px;
 
 }
@@ -152,8 +161,8 @@ header {
     background-color: rgb(255, 244, 236); /* Das macht den Kasten weiß! */
     color: rgb(99, 92, 84);
     font-family: verdana;
-    font-size: 16px;
-    padding: 15px;
+    font-size: clamp(11px, 1.4vw, 16px);
+    padding: clamp(6px, 1.3vw, 15px);
     margin-top: 15px;
     border-radius: 10px;
     box-shadow: 2px 2px 5px rgba(36, 23, 12, 0.2); /* Ein leichter Schatten für den Kasten-Look */
@@ -161,7 +170,7 @@ header {
     /* WICHTIG: Das zwingt extrem lange Wörter ohne Leerzeichen zum Umspringen! */
     overflow-wrap: break-word;
     word-wrap: break-word;
-    word-break: break-all; 
+    word-break: normal;
 
     /* Sorgt dafür, dass der Kasten schön in der Spalte bleibt */
     max-width: 90%;
@@ -388,6 +397,7 @@ header {
     font-size: 14px;
     cursor: pointer;
     background-color: rgb(248, 234, 207);
+    color: rgb(114, 107, 98);
     border: 2px solid #fac166;
     border-radius: 20px;
     transition-duration: 0.4s;
@@ -498,4 +508,74 @@ header {
 
 .kasten > div.mehr-unten::after {
     opacity: 1;
+}
+
+/* Datum in der Karte nicht mitten im Datum umbrechen */
+.task small {
+    white-space: nowrap;
+}
+
+/* --- Aktionen auf der Karte: Bearbeiten, Prio, Ausgrauen --- */
+.karten-aktionen {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+    /* zugeklappt, damit die Karte ohne Hover klein bleibt */
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.25s, opacity 0.2s, margin-top 0.25s;
+}
+
+.task:hover .karten-aktionen,
+.task:focus-within .karten-aktionen {
+    max-height: 80px;
+    margin-top: 8px;
+    opacity: 1;
+}
+
+.aktion {
+    font-family: verdana;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    border: 1px solid currentColor;
+    background-color: rgba(255, 255, 255, 0.4);
+    color: inherit;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.aktion:hover {
+    background-color: rgba(255, 255, 255, 0.8);
+}
+
+/* Prio-Karten: Sternchen oben links in der Ecke (Gegenstück zum X), in der Textfarbe der Karte */
+.task.prio {
+    padding-top: 22px; /* Platz für den Stern, damit er den Titel nicht überdeckt */
+}
+
+.task.prio::before {
+    position: absolute;
+    top: 4px;
+    left: 9px;
+    font-size: 15px;
+    line-height: 1;
+    letter-spacing: 1px;
+}
+
+/* Je höher die Prio, desto mehr Sterne */
+.task[data-prio="1"]::before { content: "★"; }
+.task[data-prio="2"]::before { content: "★★"; }
+.task[data-prio="3"]::before { content: "★★★"; }
+
+.task.prio .prio-btn {
+    background-color: rgba(255, 255, 255, 0.85);
+    font-weight: bold;
+}
+
+/* Ausgegraute Karten: leicht durchsichtig, rutschen ans Ende der Spalte */
+.task.grau {
+    opacity: 0.4;
 }

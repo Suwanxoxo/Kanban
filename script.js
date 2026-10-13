@@ -8,6 +8,8 @@ const saveTask = document.getElementById("saveTask");
 const taskText = document.getElementById("taskText");
 const taskDate = document.getElementById("taskDate");
 const wahlButtons = document.querySelectorAll("#spaltenWahl .wahl");
+const modalTitel = document.getElementById("modalTitel");
+const modalUntertitel = document.getElementById("modalUntertitel");
 
 const loginModal = document.getElementById("loginModal");
 const loginUser = document.getElementById("loginUser");
@@ -57,6 +59,25 @@ async function api(methode, pfad, daten) {
     return antwort;
 }
 
+// --- HILFSFUNKTION: Reihenfolge in einer Spalte – höchste Prio oben, ausgegraute unten ---
+const MAX_PRIO = 3;
+
+function rang(task) {
+    if (task.classList.contains("grau")) return MAX_PRIO + 1;
+    return MAX_PRIO - Number(task.dataset.prio || 0);
+}
+
+function sortiereSpalte(column) {
+    const karten = [...column.querySelectorAll(":scope > .task")];
+    // sort ist stabil: innerhalb einer Gruppe bleibt die bisherige Reihenfolge
+    karten.sort((a, b) => rang(a) - rang(b)).forEach(k => column.appendChild(k));
+}
+
+// In welcher Spalte (Status) steckt die Karte gerade?
+function statusVon(task) {
+    return Object.keys(spalten).find(status => spalten[status] === task.parentElement) || "todo";
+}
+
 // --- HILFSFUNKTION: Kärtchen bauen und mit Events ausstatten ---
 function erstelleKarte(taskData) {
     const task = document.createElement("div");
@@ -69,16 +90,84 @@ function erstelleKarte(taskData) {
     deleteBtn.textContent = "X";
 
     const name = document.createElement("strong");
-    name.textContent = taskData.name;
-
     const datum = document.createElement("small");
-    datum.textContent = taskData.date;
 
-    task.append(deleteBtn, name, document.createElement("br"), datum);
+    function zeigeDaten() {
+        name.textContent = taskData.name;
+        datum.textContent = taskData.date;
+    }
+    zeigeDaten();
 
-    // Klick auf die Karte klappt langen Text auf/zu
+    // Aktionen unten auf der Karte
+    const aktionen = document.createElement("div");
+    aktionen.className = "karten-aktionen";
+
+    const editBtn = document.createElement("button");
+    editBtn.className = "aktion";
+    editBtn.textContent = "Bearbeiten";
+
+    const prioBtn = document.createElement("button");
+    prioBtn.className = "aktion prio-btn";
+    prioBtn.textContent = "Prio";
+
+    const grauBtn = document.createElement("button");
+    grauBtn.className = "aktion";
+
+    aktionen.append(editBtn, prioBtn, grauBtn);
+    task.append(deleteBtn, name, document.createElement("br"), datum, aktionen);
+
+    function zeigeZustand() {
+        task.classList.toggle("prio", taskData.prio > 0);
+        task.dataset.prio = taskData.prio || 0;
+        task.classList.toggle("grau", !!taskData.grau);
+        prioBtn.textContent = taskData.prio ? "Prio " + taskData.prio + "/" + MAX_PRIO : "Prio";
+        grauBtn.textContent = taskData.grau ? "Aktivieren" : "Ausgrauen";
+    }
+    zeigeZustand();
+
+    // Prio eine Stufe hoch (nach der höchsten wieder 0) / Ausgrauen umschalten,
+    // speichern und Spalte neu sortieren
+    async function umschalten(feld) {
+        let neu = taskData[feld] ? 0 : 1;
+
+        if (feld === "prio") {
+            // Nächste höhere Stufe, die in dieser Spalte noch frei ist (sonst zurück auf 0)
+            const belegt = [...task.parentElement.querySelectorAll(":scope > .task")]
+                .filter(k => k !== task)
+                .map(k => Number(k.dataset.prio));
+            neu = 0;
+            for (let stufe = (taskData.prio || 0) + 1; stufe <= MAX_PRIO; stufe++) {
+                if (!belegt.includes(stufe)) { neu = stufe; break; }
+            }
+            if (!taskData.prio && neu === 0) {
+                alert("In dieser Spalte sind schon alle " + MAX_PRIO + " Prios vergeben.");
+                return;
+            }
+        }
+
+        try {
+            await api("PATCH", "/tasks/" + taskData.id, { [feld]: neu });
+            taskData[feld] = neu;
+            zeigeZustand();
+            sortiereSpalte(task.parentElement);
+        } catch (error) {
+            alert("Fehler beim Speichern: " + error.message);
+        }
+    }
+
+    // Der Server meldet die Prio zurück (fällt weg, wenn die Stufe in der neuen Spalte belegt ist)
+    task.setzePrio = (prio) => {
+        taskData.prio = prio;
+        zeigeZustand();
+    };
+
+    prioBtn.addEventListener("click", () => umschalten("prio"));
+    grauBtn.addEventListener("click", () => umschalten("grau"));
+    editBtn.addEventListener("click", () => oeffneModal({ taskData, task, zeigeDaten }));
+
+    // Klick auf die Karte klappt langen Text auf/zu (nicht bei Klick auf einen Button)
     task.addEventListener("click", (e) => {
-        if (e.target !== deleteBtn) task.classList.toggle("offen");
+        if (!e.target.closest("button")) task.classList.toggle("offen");
     });
 
     // Drag & Drop
@@ -125,7 +214,7 @@ function abmelden() {
 }
 
 async function zeigeBoard(username) {
-    userName.textContent = "👤 " + username;
+    userName.textContent = username;
     userInfo.classList.remove("hidden");
     loginModal.classList.add("hidden");
 
@@ -136,6 +225,7 @@ async function zeigeBoard(username) {
         const spalte = spalten[taskData.status] || spalten.todo;
         spalte.appendChild(erstelleKarte(taskData));
     });
+    Object.values(spalten).forEach(sortiereSpalte);
 }
 
 loginBtn.addEventListener("click", () => anmelden("/login"));
@@ -149,19 +239,36 @@ logoutBtn.addEventListener("click", async () => {
     abmelden();
 });
 
-// Modal öffnen / schließen
-addBtn.addEventListener("click", () => {
+// Modal öffnen – ohne Angabe zum Anlegen, mit Karte zum Bearbeiten
+let bearbeitung = null; // { taskData, task, zeigeDaten }, solange eine Karte bearbeitet wird
+
+function oeffneModal(karte = null) {
+    bearbeitung = karte;
     modal.classList.remove("hidden");
 
-    // Aktuelles Datum berechnen und eintragen
-    const heute = new Date();
-    const jahr = heute.getFullYear();
-    const monat = String(heute.getMonth() + 1).padStart(2, '0');
-    const tag = String(heute.getDate()).padStart(2, '0');
+    if (karte) {
+        modalTitel.textContent = "BEARBEITEN";
+        modalUntertitel.textContent = "Was soll sich ändern?";
+        taskText.value = karte.taskData.name;
+        taskDate.value = karte.taskData.date;
+        setzeAuswahl(statusVon(karte.task));
+    } else {
+        modalTitel.textContent = "NEUE AUFGABE";
+        modalUntertitel.textContent = "Was steht an?";
+        taskText.value = "";
 
-    taskDate.value = `${jahr}-${monat}-${tag}`;
-    setzeAuswahl(null);
-});
+        // Aktuelles Datum berechnen und eintragen
+        const heute = new Date();
+        const jahr = heute.getFullYear();
+        const monat = String(heute.getMonth() + 1).padStart(2, '0');
+        const tag = String(heute.getDate()).padStart(2, '0');
+
+        taskDate.value = `${jahr}-${monat}-${tag}`;
+        setzeAuswahl(null);
+    }
+}
+
+addBtn.addEventListener("click", () => oeffneModal());
 
 closeModal.addEventListener("click", () => modal.classList.add("hidden"));
 
@@ -179,20 +286,43 @@ wahlButtons.forEach(button => {
     });
 });
 
-// --- 1. NEUE AUFGABE SPEICHERN ---
+// --- 1. AUFGABE SPEICHERN (neu oder bearbeitet) ---
 saveTask.addEventListener("click", async () => {
     if (taskText.value.trim() === "") return;
 
     try {
-        const taskData = await api("POST", "/tasks", {
-            name: taskText.value,
-            date: taskDate.value,
-            status: gewaehlterStatus || "todo"
-        });
-        (spalten[taskData.status] || spalten.todo).appendChild(erstelleKarte(taskData));
+        if (bearbeitung) {
+            const { taskData, task, zeigeDaten } = bearbeitung;
+            // Ohne Auswahl bleibt die Karte in ihrer Spalte
+            const status = gewaehlterStatus || statusVon(task);
+            const antwort = await api("PATCH", "/tasks/" + taskData.id, {
+                name: taskText.value,
+                date: taskDate.value,
+                status
+            });
+            taskData.name = taskText.value.trim();
+            taskData.date = taskDate.value;
+            zeigeDaten();
+            task.setzePrio(antwort.prio);
+
+            if (spalten[status] !== task.parentElement) {
+                spalten[status].appendChild(task);
+                sortiereSpalte(spalten[status]);
+            }
+        } else {
+            const taskData = await api("POST", "/tasks", {
+                name: taskText.value,
+                date: taskDate.value,
+                status: gewaehlterStatus || "todo"
+            });
+            const spalte = spalten[taskData.status] || spalten.todo;
+            spalte.appendChild(erstelleKarte(taskData));
+            sortiereSpalte(spalte);
+        }
 
         taskText.value = "";
         taskDate.value = "";
+        bearbeitung = null;
         modal.classList.add("hidden");
     } catch (error) {
         alert("Fehler beim Speichern: " + error.message);
@@ -223,7 +353,12 @@ Object.entries(spalten).forEach(([status, column]) => {
 
         if (draggedTask) {
             column.appendChild(draggedTask);
+            sortiereSpalte(column);
             api("PATCH", "/tasks/" + draggedTask.dataset.id, { status })
+                .then(antwort => {
+                    draggedTask.setzePrio(antwort.prio);
+                    sortiereSpalte(column);
+                })
                 .catch(error => alert("Fehler beim Verschieben: " + error.message));
         }
     });
